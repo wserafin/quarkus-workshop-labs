@@ -1,0 +1,79 @@
+iapiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productdb
+  labels:
+    app: productdb
+    app.kubernetes.io/name: productdb
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: product-catalog
+    app.kubernetes.io/instance: database
+    app.openshift.io/runtime: mariadb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+       name: productdb
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        alpha.image.policy.openshift.io/resolve-names: '*'
+      labels:
+        name: productdb
+    spec:
+      containers:
+        - name: productdb
+          image: registry.redhat.io/rhel8/postgresql-10
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 5432
+	    protocol: TCP 
+	  env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-database
+                  key: database-user
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-database
+                  key: database-password
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-database
+                  key: database-name
+          securityContext:
+            capabilities: {}
+          livenessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+                - '--live'
+            initialDelaySeconds: 120
+            timeoutSeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+          - mountPath: /var/lib/mysql/data
+            name: productdb-data
+          - mountPath: /opt/app-root/src/mysql-init/90-init-data.sh
+            name: productdb-init
+            subPath: 90-init-database.sh
+          - mountPath: /opt/app-root/src/mysql-data/import.sql
+            name: productdb-init
+            subPath: import.sql
+          - mountPath: /opt/app-root/src/mysql-data/schema.sql
+            name: productdb-init
+            subPath: schema.sql
+      volumes:
+      - name: productdb-data
+        persistentVolumeClaim:
+          claimName: productdb
+      - configMap:
+          name: productdb-init
+        name: productdb-init
