@@ -20,6 +20,7 @@ sleep 30
 mvn clean package -Pnative -DskipTests -f ${CHE_PROJECTS_ROOT}/quarkus-workshop-labs
 
 oc new-build quay.io/quarkus/ubi-quarkus-native-binary-s2i:19.3.1 --binary --name=people -l app=people
+#oc new-app registry.access.redhat.com/ubi8/openjdk-11~https://github.com/wserafin/quarkus-workshop-labs.git -l "app.openshift.io/runtime=quarkus,app.kubernetes.io/part-of=people"
 oc start-build people --from-file $CHE_PROJECTS_ROOT/quarkus-workshop-labs/target/*-runner --follow
 oc new-app people -l "app.openshift.io/runtime=quarkus,app.kubernetes.io/part-of=people" && oc expose svc/people
 oc rollout status -w dc/people
